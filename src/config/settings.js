@@ -1,0 +1,6 @@
+module.exports = {
+  MAX_PLAYERS: 40,
+  MIN_PLAYERS: 1,
+  ROUND_DELAY: 7000,
+  LOBBY_TIME: 30000
+};
