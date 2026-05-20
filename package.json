@@ -1,0 +1,17 @@
+{
+  "name": "outlastbot",
+  "version": "1.0.0",
+  "description": "Telegram multiplayer survival horror game bot",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
