@@ -1,7 +1,22 @@
 module.exports = {
-  "name": "EVIL FOREST",
-  
-  "difficulty": "hard",
+  id: "evil_forest",
+
+  name: "Evil Forest",
+
+  location: "Benin Kingdom",
+
+  danger: "EXTREME",
+
+  tagline:
+    "The forest takes what it is owed. It has always been owed.",
+
+  roundConfig: {
+    min: 6,
+    max: 8,
+    survivalChance: 0.08,
+    funnyChance: 0.15,
+    worldEventChance: 0.25
+  },
   
   "introAtmosphere": "Legends spoke of hidden gold buried deep within the forests of the old Benin Kingdom.🌳🪾 Greedy adventurers entered the forest searching for riches before sunrise. By nightfall, the paths behind them had vanished into the fog.🌫️ Strange drums echoed between the trees as shadows moved in silence.🧌 The forest was never protecting treasure. It was feeding on those who searched for it.",
   
