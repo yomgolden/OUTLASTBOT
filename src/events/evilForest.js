@@ -1,8 +1,10 @@
 module.exports = {
   "name": "EVIL FOREST",
+  
   "difficulty": "hard",
   
   "introAtmosphere": "Legends spoke of hidden gold buried deep within the forests of the old Benin Kingdom.🌳🪾 Greedy adventurers entered the forest searching for riches before sunrise. By nightfall, the paths behind them had vanished into the fog.🌫️ Strange drums echoed between the trees as shadows moved in silence.🧌 The forest was never protecting treasure. It was feeding on those who searched for it.",
+  
   "openingNarrative": [
     "You followed the old map 🗾 deeper into the forest, even after the villagers begged you to turn back.",
     "You came to the Benin forest searching for gold, but the silence between the trees felt wrong.",
@@ -15,6 +17,7 @@ module.exports = {
     "You joined the expedition for treasure, but now survival is the only thing that matters.",
     "You reached the ancient forest gates at midnight, just as the drums suddenly stopped."
   ],
+ 
   "midNarrative": [
     "I really thought this treasure💰 was going to change my life forever.",
     "The deeper we go, the more this forest feels wrong.🌲😨",
@@ -37,6 +40,7 @@ module.exports = {
     "I do not think anyone who entered this place ever truly escaped it.",
     "Part of me still wants the treasure. That is the scariest part."
   ],
+ 
   "worldEvents": [
     "Distant ancestral drums call for fresh blood.",
     "The iroko trees shook violently as if possessed.",
@@ -55,6 +59,7 @@ module.exports = {
     "A circle of glowing ancestral skulls rose from the mud.",
     "Whispers called each survivor by their mother’s secret name."
   ],
+  
   "survival": [
     "A deadly snake 🐍 dropped from a branch, but {Player} killed it 🪈🐍 just before it struck another survivor.",
     "After hours of searching, a hidden stream 🌊🌊 was discovered and {Player} rushed to drink from it first.",
@@ -80,6 +85,7 @@ module.exports = {
     "{Player} refused to believe in curses until their hair started moving on its own.",
     "{Player} spent their last moments wondering if this counts as a “rich experience.”"
   ],
+  
   "elimination": [
     "{Victim} disappeared into the fog after following distant drum sounds alone.",
     "A hidden trap snapped beneath {Victim}, dragging them deep underground.",
@@ -117,6 +123,7 @@ module.exports = {
     "{Killer} swapped {Victim}’s protective charm for a cursed stone, inviting the darkness.",
     "The red clay of the earth rose up to fill {Victim}’s lungs until they hardened into a statue."
   ],
+ 
   "winner": [
     "Morning finally reached the forest.",
     "Covered in dirt, blood, and ash, {Winner} walked out alone.",
