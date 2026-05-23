@@ -13,9 +13,9 @@ module.exports = {
   roundConfig: {
     min: 6,
     max: 8,
-    survivalChance: 0.08,
-   eliminationChance: 0.15,
-    worldEventChance: 0.25
+    survivalChance: 0.30,
+   eliminationChance: 0.50,
+    worldEventChance: 0.20
   },
   
   "introAtmosphere": "Legends spoke of hidden gold buried deep within the forests of the old Benin Kingdom.🌳🪾 Greedy adventurers entered the forest searching for riches before sunrise. By nightfall, the paths behind them had vanished into the fog.🌫️ Strange drums echoed between the trees as shadows moved in silence.🧌 The forest was never protecting treasure. It was feeding on those who searched for it.",
