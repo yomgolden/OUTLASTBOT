@@ -1,49 +1,145 @@
-const settings = require("../config/settings");
+// ─────────────────────────────────────────────
+//  OUTLAST — Match Engine
+// ─────────────────────────────────────────────
 
-const { randomItem } = require("../utils/random");
+var settings = require("../config/settings");
+var roundGenerator = require("./roundGenerator");
 
-const { cinematicMessage } = require("../utils/formatter");
+var activeMatches = {};
 
-const roundGenerator = require("./roundGenerator");
+// ─────────────────────────────────────────────
+// Delay Helper
+// ─────────────────────────────────────────────
+function delay(ms) {
+  return new Promise(function(resolve) {
+    setTimeout(resolve, ms);
+  });
+}
 
-const activeMatches = {};
+// ─────────────────────────────────────────────
+// Safe Telegram Sender
+// ─────────────────────────────────────────────
+async function sendCard(bot, chatId, text) {
 
-async function startMatch(bot, chatId, match) {
-
-  let round = 1;
-
-  while (match.players.filter(p => p.alive).length > 1) {
-
-    const roundText = roundGenerator.generateRound(match);
+  try {
 
     await bot.sendMessage(
       chatId,
-      cinematicMessage(`ROUND ${round}`, roundText),
-      {
-        parse_mode: "HTML"
-      }
+      text
     );
 
-    round++;
+  } catch (err) {
 
-    await delay(settings.ROUND_DELAY);
+    console.error(
+      "[sendCard]",
+      err.message
+    );
+
+    await delay(1500);
+
+    try {
+
+      await bot.sendMessage(
+        chatId,
+        text
+      );
+
+    } catch (err2) {
+
+      console.error(
+        "[sendCard retry failed]",
+        err2.message
+      );
+    }
   }
-
-  const winner = match.players.find(p => p.alive);
-
-  await bot.sendMessage(
-    chatId,
-    `🏆 WINNER: ${winner.name}`
-  );
-
-  delete activeMatches[chatId];
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+// ─────────────────────────────────────────────
+// START MATCH
+// ─────────────────────────────────────────────
+async function startMatch(bot, chatId, match) {
+
+  activeMatches[chatId] = match;
+
+  try {
+
+    var cards =
+      roundGenerator.generateMatch(match);
+
+    for (var i = 0; i < cards.length; i++) {
+
+      var item = cards[i];
+
+      await sendCard(
+        bot,
+        chatId,
+        item.card
+      );
+
+      // pacing
+      if (item.type === "intro") {
+
+        await delay(
+          settings.ROUND_DELAY * 1.2
+        );
+
+      } else if (
+        item.type === "final_open"
+      ) {
+
+        await delay(
+          settings.ROUND_DELAY * 1.3
+        );
+
+      } else if (
+        item.type === "final_elim"
+      ) {
+
+        await delay(
+          settings.ROUND_DELAY * 1.4
+        );
+
+      } else if (
+        item.type === "winner"
+      ) {
+
+        await delay(
+          settings.ROUND_DELAY * 1.2
+        );
+
+      } else {
+
+        await delay(
+          settings.ROUND_DELAY
+        );
+      }
+    }
+
+  } catch (err) {
+
+    console.error(
+      "[matchEngine] Error in chat " +
+      chatId,
+      err
+    );
+
+    await bot.sendMessage(
+      chatId,
+      "The forest swallowed the match. Something went wrong."
+    );
+
+  } finally {
+
+    delete activeMatches[chatId];
+  }
+}
+
+function isMatchActive(chatId) {
+  return !!activeMatches[chatId];
 }
 
 module.exports = {
   startMatch,
-  activeMatches
+  isMatchActive,
+  activeMatches,
 };
