@@ -14,7 +14,7 @@ module.exports = {
     min: 6,
     max: 8,
     survivalChance: 0.08,
-    funnyChance: 0.15,
+   eliminationChance: 0.15,
     worldEventChance: 0.25
   },
   
