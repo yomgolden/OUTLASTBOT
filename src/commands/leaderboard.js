@@ -1,18 +1,38 @@
+// ─────────────────────────────────────────────
+//  OUTLASTBOT — /leaderboard Command
+//  Shows group or global leaderboard
+// ─────────────────────────────────────────────
+
+const { getGroupLeaderboard, getGlobalLeaderboard } = require("../utils/stats");
+const { leaderboardCard } = require("../utils/format");
+const { sendAndDelete } = require("../utils/autoDelete");
+
 module.exports = (bot) => {
 
   bot.onText(/\/leaderboard/, async (msg) => {
+    const isGroup = msg.chat.type !== "private";
 
-    bot.sendMessage(
-      msg.chat.id,
-      `
-🏆 GROUP LEADERBOARD
+    let players;
+    let title;
 
-1. VOID — 12 Wins
-2. BIGSMURF — 9 Wins
-3. PABLO — 5 Wins
-`
-    );
+    if (isGroup) {
+      // Show group-specific wins
+      players = getGroupLeaderboard(msg.chat.id);
+      title = "GROUP LEADERBOARD";
+    } else {
+      // Show global leaderboard in private
+      players = getGlobalLeaderboard();
+      title = "OUTLAST GLOBAL";
+    }
 
+    if (!players.length) {
+      return bot.sendMessage(
+        msg.chat.id,
+        "No matches played yet. Start one with /outlast"
+      );
+    }
+
+    await sendAndDelete(bot, msg.chat.id, leaderboardCard(players, title));
   });
 
 };
