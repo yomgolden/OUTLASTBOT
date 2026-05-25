@@ -1,5 +1,13 @@
+// ─────────────────────────────────────────────
+//  OUTLASTBOT — Entry Point
+// ─────────────────────────────────────────────
+
 require("dotenv").config();
 
-const bot = require("./bot");
+// Validate token before starting
+if (!process.env.BOT_TOKEN) {
+  console.error("❌  Missing BOT_TOKEN in environment variables.");
+  process.exit(1);
+}
 
-console.log("OUTLASTBOT is online.");
+require("./bot");
