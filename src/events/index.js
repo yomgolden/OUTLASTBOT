@@ -5,7 +5,6 @@
 
 const events = {
   evil_forest: require("./evilForest"),
-  mushin_nightmare: require("./mushinNightmare"),
   blackout_yaba: require("./blackoutYaba"),
   ajegunle_warzone: require("./ajegunleWarzone"),
 };
