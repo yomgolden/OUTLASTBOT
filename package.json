@@ -1,7 +1,7 @@
 {
   "name": "outlastbot",
   "version": "1.0.0",
-  "description": "Telegram multiplayer survival horror game bot",
+  "description": "OUTLASTBOT — Telegram multiplayer survival horror bot",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
