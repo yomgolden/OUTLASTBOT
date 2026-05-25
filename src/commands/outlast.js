@@ -1,42 +1,54 @@
-const events = {
-  evilForest: require("../events/evilForest"),
-  blackoutYaba: require("../events/blackoutYaba")
-};
+// ─────────────────────────────────────────────
+//  OUTLASTBOT — /outlast Command
+//  Triggers event selection in a group
+// ─────────────────────────────────────────────
+
+const { isMatchActive } = require("../engine/matchEngine");
+const { sendAndDelete } = require("../utils/autoDelete");
 
 module.exports = (bot) => {
 
   bot.onText(/\/outlast/, async (msg) => {
+    const chatId = msg.chat.id;
 
+    // ── Group only ──────────────────────────────
     if (msg.chat.type === "private") {
       return bot.sendMessage(
-        msg.chat.id,
-        "Use this command inside a group."
+        chatId,
+        "Use /outlast inside a group to start a match."
       );
     }
 
-    bot.sendMessage(
-      msg.chat.id,
-      "🎮 SELECT AN EVENT",
+    // ── Block concurrent matches ─────────────────
+    if (isMatchActive(chatId)) {
+      return bot.sendMessage(chatId, "⚠️  A match is already running in this group.");
+    }
+
+    // ── Event selection buttons ──────────────────
+    await sendAndDelete(
+      bot,
+      chatId,
+      [
+        "🎮  SELECT AN EVENT",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "",
+        "Choose where the survivors will be dropped.",
+      ].join("\n"),
       {
         reply_markup: {
           inline_keyboard: [
             [
-              {
-                text: "🌲 Evil Forest",
-                callback_data: "event_evilForest"
-              }
+              { text: "🌿  Evil Forest", callback_data: "event_evil_forest" },
+              { text: "🌆  Mushin Nightmare", callback_data: "event_mushin_nightmare" },
             ],
             [
-              {
-                text: "⚡ Blackout Yaba",
-                callback_data: "event_blackoutYaba"
-              }
-            ]
-          ]
-        }
+              { text: "⚡  Blackout Yaba", callback_data: "event_blackout_yaba" },
+              { text: "💀  Ajegunle Warzone", callback_data: "event_ajegunle_warzone" },
+            ],
+          ],
+        },
       }
     );
-
   });
 
 };
