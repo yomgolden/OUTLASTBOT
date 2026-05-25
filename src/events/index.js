@@ -6,7 +6,6 @@
 const events = {
   evil_forest: require("./evilForest"),
   blackout_yaba: require("./blackoutYaba"),
-  ajegunle_warzone: require("./ajegunleWarzone"),
 };
 
 module.exports = events;
