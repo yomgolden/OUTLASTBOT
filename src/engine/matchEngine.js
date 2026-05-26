@@ -1,28 +1,24 @@
 // ─────────────────────────────────────────────
 //  OUTLASTBOT — Match Engine
-//  Full game loop. Ends only when 1 survivor left.
 // ─────────────────────────────────────────────
 
-const { randomItem, randomChance, randomBetween } = require("../utils/random");
-const { introCard, roundCard, finalCard, winnerCard } = require("../utils/format");
+const { randomItem, randomBetween } = require("../utils/random");
+const { introCard, roundCard, winnerCard } = require("../utils/format");
 const { sendAndDelete } = require("../utils/autoDelete");
 const { saveMatchResult } = require("../utils/stats");
 
 const activeMatches = {};
 
-// ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
 function delay(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 function fill(template, vars) {
   return template
-    .replace(/{victim}/gi, vars.victim || "")
-    .replace(/{killer}/gi, vars.killer || "")
-    .replace(/{player}/gi, vars.player || "")
-    .replace(/{winner}/gi, vars.winner || "");
+    .replace(/{victim}/gi,  vars.victim  || "")
+    .replace(/{killer}/gi,  vars.killer  || "")
+    .replace(/{player}/gi,  vars.player  || "")
+    .replace(/{winner}/gi,  vars.winner  || "");
 }
 
 function getAlive(players) {
@@ -41,21 +37,30 @@ function pickTwo(players) {
 }
 
 // ─────────────────────────────────────────────
-// Run one elimination — marks victim dead
-// Returns text line or null
+// Mention — clickable for real players
+// ─────────────────────────────────────────────
+function mentionName(player) {
+  if (!player.ai && player.id && !String(player.id).startsWith("ai_")) {
+    return `[${player.name}](tg://user?id=${player.id})`;
+  }
+  return player.name;
+}
+
+// ─────────────────────────────────────────────
+// Run one elimination — returns Markdown line with ~~victim~~
 // ─────────────────────────────────────────────
 function runElimination(players, event) {
   const alive = getAlive(players);
-  if (alive.length <= 1) return null; // never kill the last survivor here
+  if (alive.length <= 1) return null;
 
-  const template = randomItem(event.elimination);
+  const template  = randomItem(event.elimination);
   const needsKiller = /{killer}/i.test(template) && alive.length >= 2;
 
-  let victim, killer;
+  let victim, killer, killerPlayer;
 
   if (needsKiller) {
     const [a, b] = pickTwo(players);
-    killer = a;
+    killerPlayer = a;
     victim = b;
   } else {
     victim = pickOne(players);
@@ -65,66 +70,99 @@ function runElimination(players, event) {
 
   victim.alive = false;
 
+  // Build display names — victim gets strikethrough, killer is plain
+  const victimDisplay = `~~${victim.name.toUpperCase()}~~`;
+  const killerDisplay = killerPlayer ? killerPlayer.name.toUpperCase() : "";
+
   return fill(template, {
-    victim: victim.name.toUpperCase(),
-    killer: killer ? killer.name.toUpperCase() : "",
+    victim: victimDisplay,
+    killer: killerDisplay,
   });
 }
 
 // ─────────────────────────────────────────────
-// Build one round — guaranteed 4–6 events
+// Build one round — random mix of 4–6 events
+// Order shuffled each round
 // ─────────────────────────────────────────────
-function buildRound(match, roundNumber, usedWorldEvents) {
+function buildRound(match, roundNumber, totalRounds, usedWorldEvents) {
   const { event, players } = match;
   const eventLines = [];
 
-  // 1. World event (always try first)
-  const unused = event.worldEvents.filter((e) => !usedWorldEvents.has(e));
-  if (unused.length) {
-    const we = randomItem(unused);
-    usedWorldEvents.add(we);
-    eventLines.push(we);
+  // ── Pick narrative by position ──────────────
+  let narrative;
+  if (roundNumber === 1) {
+    narrative = randomItem(event.openingNarrative);
+  } else if (roundNumber === totalRounds || getAlive(players).length <= 2) {
+    narrative = randomItem(event.closingNarrative);
+  } else {
+    narrative = randomItem(event.midNarrative);
   }
 
-  // 2. Survival moments — 1 or 2
-  const survivalCount = randomBetween(1, 2);
-  for (let i = 0; i < survivalCount; i++) {
-    const player = pickOne(players);
-    if (player) {
-      eventLines.push(
-        fill(randomItem(event.survival), { player: player.name.toUpperCase() })
-      );
+  // ── Build a pool of possible event types ────
+  // Then shuffle and pick 4–6
+  const pool = [];
+
+  // World events — add 1 or 2 if available
+  const unusedWorld = event.worldEvents.filter((e) => !usedWorldEvents.has(e));
+  if (unusedWorld.length) {
+    pool.push({ type: "world", content: randomItem(unusedWorld) });
+    if (unusedWorld.length > 1 && Math.random() < 0.4) {
+      const second = unusedWorld.filter(e => e !== pool[pool.length-1].content);
+      if (second.length) pool.push({ type: "world", content: randomItem(second) });
     }
   }
 
-  // 3. Eliminations — always at least 1, up to 3 (never kill the last survivor)
+  // Survival moments — add 1 or 2
+  const survCount = randomBetween(1, 2);
+  for (let i = 0; i < survCount; i++) {
+    const player = pickOne(players);
+    if (player) {
+      pool.push({
+        type: "survival",
+        content: fill(randomItem(event.survival), { player: player.name.toUpperCase() }),
+      });
+    }
+  }
+
+  // Eliminations — 1 to 3, never kill last survivor
   const maxElim = Math.min(3, getAlive(players).length - 1);
   const elimCount = maxElim > 0 ? randomBetween(1, maxElim) : 0;
-
   for (let i = 0; i < elimCount; i++) {
     if (getAlive(players).length <= 1) break;
     const result = runElimination(players, event);
-    if (result) eventLines.push(`ELIMINATED: ${result}`);
+    if (result) pool.push({ type: "elim", content: result });
   }
 
-  // 4. Pad to minimum 4 events if needed
-  while (eventLines.length < 4) {
+  // ── Shuffle pool for random ordering ────────
+  pool.sort(() => Math.random() - 0.5);
+
+  // ── Ensure minimum 4 events ─────────────────
+  while (pool.length < 4) {
     const player = pickOne(players);
-    if (player) {
-      eventLines.push(
-        fill(randomItem(event.survival), { player: player.name.toUpperCase() })
-      );
-    } else break;
+    if (!player) break;
+    pool.push({
+      type: "survival",
+      content: fill(randomItem(event.survival), { player: player.name.toUpperCase() }),
+    });
   }
 
-  const narrative    = randomItem(event.narration);
+  // ── Mark used world events ───────────────────
+  for (const item of pool) {
+    if (item.type === "world") usedWorldEvents.add(item.content);
+  }
+
+  // ── Render lines ─────────────────────────────
+  for (const item of pool) {
+    eventLines.push(item.content);
+  }
+
   const survivorsLeft = getAlive(players).length;
 
-  return roundCard(roundNumber, event.name, narrative, eventLines, survivorsLeft, players);
+  return roundCard(roundNumber, event.name, narrative, eventLines, survivorsLeft);
 }
 
 // ─────────────────────────────────────────────
-// START MATCH — runs until exactly 1 survivor
+// START MATCH
 // ─────────────────────────────────────────────
 async function startMatch(bot, chatId, match, speedMs) {
   activeMatches[chatId] = match;
@@ -133,6 +171,10 @@ async function startMatch(bot, chatId, match, speedMs) {
   const usedWorldEvents = new Set();
   const eliminated = [];
 
+  // Pre-calculate total rounds for narrative selection
+  const cfg = match.event.roundConfig;
+  const totalRounds = randomBetween(cfg.min, cfg.max);
+
   try {
     // INTRO
     await sendAndDelete(bot, chatId, introCard(match.event, match.players.length));
@@ -140,23 +182,12 @@ async function startMatch(bot, chatId, match, speedMs) {
 
     let round = 1;
 
-    // ── Core loop — keeps going until 1 survivor ──
     while (getAlive(match.players).length > 1) {
 
-      const alive = getAlive(match.players);
+      const aliveBefore = getAlive(match.players).map((p) => p.id);
 
-      // Final showdown card when exactly 2 remain
-      if (alive.length === 2) {
-        await sendAndDelete(bot, chatId, finalCard(alive[0].name, alive[1].name));
-        await delay(pace * 1.3);
-      }
+      const roundText = buildRound(match, round, totalRounds, usedWorldEvents);
 
-      // Snapshot alive before round
-      const aliveBefore = alive.map((p) => p.id);
-
-      const roundText = buildRound(match, round, usedWorldEvents);
-
-      // Snapshot alive after round to find who died
       const aliveAfter = getAlive(match.players).map((p) => p.id);
       const newlyDead  = match.players.filter(
         (p) => aliveBefore.includes(p.id) && !aliveAfter.includes(p.id)
@@ -164,23 +195,20 @@ async function startMatch(bot, chatId, match, speedMs) {
       eliminated.push(...newlyDead);
 
       await sendAndDelete(bot, chatId, roundText);
-      await delay(alive.length === 2 ? pace * 1.4 : pace);
+      await delay(pace);
 
       round++;
-
-      // Safety cap — 30 rounds max to prevent infinite loop
-      if (round > 30) break;
+      if (round > 30) break; // safety cap
     }
 
-    // ── WINNER ────────────────────────────────────
-    const survivors = getAlive(match.players);
-    const winner    = survivors[0] || match.players[0];
-
+    // ── WINNER ────────────────────────────────
+    const survivors   = getAlive(match.players);
+    const winner      = survivors[0] || match.players[0];
     const reversedElim = eliminated.slice().reverse();
-    const runnerUp = reversedElim[0] || null;
-    const third    = reversedElim[1] || null;
+    const runnerUp    = reversedElim[0] || null;
+    const third       = reversedElim[1] || null;
 
-    const winnerLine = fill(randomItem(match.event.winner), {
+    const winnerLine  = fill(randomItem(match.event.winner), {
       winner: winner.name.toUpperCase(),
     });
 
@@ -190,12 +218,12 @@ async function startMatch(bot, chatId, match, speedMs) {
       winnerCard(
         winner.name,
         runnerUp ? runnerUp.name : null,
-        third    ? third.name    : null,
+        third    ? third.name   : null,
         winnerLine
       )
     );
 
-    // ── SAVE STATS ────────────────────────────────
+    // ── SAVE STATS ────────────────────────────
     const realPlayers = match.players.filter((p) => !p.ai);
     saveMatchResult(realPlayers, winner, match.event.id, chatId);
 
