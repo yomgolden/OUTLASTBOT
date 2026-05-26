@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────
 //  OUTLASTBOT — Match Engine
-//  Drives the full game loop from intro to winner
+//  Full game loop. Ends only when 1 survivor left.
 // ─────────────────────────────────────────────
 
 const { randomItem, randomChance, randomBetween } = require("../utils/random");
@@ -8,21 +8,15 @@ const { introCard, roundCard, finalCard, winnerCard } = require("../utils/format
 const { sendAndDelete } = require("../utils/autoDelete");
 const { saveMatchResult } = require("../utils/stats");
 
-// ─────────────────────────────────────────────
-// Active matches map — keyed by chatId
-// ─────────────────────────────────────────────
 const activeMatches = {};
 
 // ─────────────────────────────────────────────
-// Delay helper
+// Helpers
 // ─────────────────────────────────────────────
 function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-// ─────────────────────────────────────────────
-// Fill {placeholder} in template strings
-// ─────────────────────────────────────────────
 function fill(template, vars) {
   return template
     .replace(/{victim}/gi, vars.victim || "")
@@ -31,40 +25,31 @@ function fill(template, vars) {
     .replace(/{winner}/gi, vars.winner || "");
 }
 
-// ─────────────────────────────────────────────
-// Get all alive players
-// ─────────────────────────────────────────────
 function getAlive(players) {
   return players.filter((p) => p.alive);
 }
 
-// ─────────────────────────────────────────────
-// Pick one alive player at random
-// ─────────────────────────────────────────────
 function pickOne(players) {
   const alive = getAlive(players);
   if (!alive.length) return null;
   return alive[Math.floor(Math.random() * alive.length)];
 }
 
-// ─────────────────────────────────────────────
-// Pick two different alive players
-// ─────────────────────────────────────────────
 function pickTwo(players) {
   const alive = getAlive(players).sort(() => Math.random() - 0.5);
   return [alive[0] || null, alive[1] || null];
 }
 
 // ─────────────────────────────────────────────
-// Run one elimination — marks player dead
+// Run one elimination — marks victim dead
+// Returns text line or null
 // ─────────────────────────────────────────────
 function runElimination(players, event) {
   const alive = getAlive(players);
-  if (!alive.length) return null;
+  if (alive.length <= 1) return null; // never kill the last survivor here
 
   const template = randomItem(event.elimination);
-  const needsKiller =
-    /{killer}/i.test(template) && alive.length >= 2;
+  const needsKiller = /{killer}/i.test(template) && alive.length >= 2;
 
   let victim, killer;
 
@@ -87,131 +72,115 @@ function runElimination(players, event) {
 }
 
 // ─────────────────────────────────────────────
-// Generate round events (narration + actions)
+// Build one round — guaranteed 4–6 events
 // ─────────────────────────────────────────────
 function buildRound(match, roundNumber, usedWorldEvents) {
-  const event = match.event;
-  const cfg = event.roundConfig;
+  const { event, players } = match;
   const eventLines = [];
-  let happened = false;
 
-  // World event
-  if (randomChance(cfg.worldEventChance)) {
-    const unused = event.worldEvents.filter((e) => !usedWorldEvents.has(e));
-    if (unused.length) {
-      const we = randomItem(unused);
-      usedWorldEvents.add(we);
-      eventLines.push("🌑  " + we);
-      happened = true;
-    }
+  // 1. World event (always try first)
+  const unused = event.worldEvents.filter((e) => !usedWorldEvents.has(e));
+  if (unused.length) {
+    const we = randomItem(unused);
+    usedWorldEvents.add(we);
+    eventLines.push(we);
   }
 
-  // Survival
-  if (randomChance(cfg.survivalChance)) {
-    const player = pickOne(match.players);
+  // 2. Survival moments — 1 or 2
+  const survivalCount = randomBetween(1, 2);
+  for (let i = 0; i < survivalCount; i++) {
+    const player = pickOne(players);
     if (player) {
-      const text = fill(randomItem(event.survival), {
-        player: player.name.toUpperCase(),
-      });
-      eventLines.push("⚡  " + text);
-      happened = true;
+      eventLines.push(
+        fill(randomItem(event.survival), { player: player.name.toUpperCase() })
+      );
     }
   }
 
-  // Elimination
-  if (randomChance(cfg.eliminationChance)) {
-    const result = runElimination(match.players, event);
-    if (result) {
-      eventLines.push("☠️   " + result);
-      happened = true;
-    }
+  // 3. Eliminations — always at least 1, up to 3 (never kill the last survivor)
+  const maxElim = Math.min(3, getAlive(players).length - 1);
+  const elimCount = maxElim > 0 ? randomBetween(1, maxElim) : 0;
+
+  for (let i = 0; i < elimCount; i++) {
+    if (getAlive(players).length <= 1) break;
+    const result = runElimination(players, event);
+    if (result) eventLines.push(`ELIMINATED: ${result}`);
   }
 
-  // Guarantee at least one thing happened
-  if (!happened) {
-    const player = pickOne(match.players);
+  // 4. Pad to minimum 4 events if needed
+  while (eventLines.length < 4) {
+    const player = pickOne(players);
     if (player) {
-      const text = fill(randomItem(event.survival), {
-        player: player.name.toUpperCase(),
-      });
-      eventLines.push("⚡  " + text);
-    }
+      eventLines.push(
+        fill(randomItem(event.survival), { player: player.name.toUpperCase() })
+      );
+    } else break;
   }
 
-  const narrative = randomItem(event.narration);
-  const survivorsLeft = getAlive(match.players).length;
+  const narrative    = randomItem(event.narration);
+  const survivorsLeft = getAlive(players).length;
 
-  return roundCard(
-    roundNumber,
-    event.name,
-    narrative,
-    eventLines,
-    survivorsLeft
-  );
+  return roundCard(roundNumber, event.name, narrative, eventLines, survivorsLeft, players);
 }
 
 // ─────────────────────────────────────────────
-// START MATCH — full game loop
+// START MATCH — runs until exactly 1 survivor
 // ─────────────────────────────────────────────
 async function startMatch(bot, chatId, match, speedMs) {
   activeMatches[chatId] = match;
 
   const pace = speedMs || 7000;
   const usedWorldEvents = new Set();
-  const eliminated = []; // track order of death for podium
+  const eliminated = [];
 
   try {
     // INTRO
     await sendAndDelete(bot, chatId, introCard(match.event, match.players.length));
     await delay(pace * 1.2);
 
-    // ROUNDS
-    const cfg = match.event.roundConfig;
-    const totalRounds = randomBetween(cfg.min, cfg.max);
+    let round = 1;
 
-    for (let round = 1; round <= totalRounds; round++) {
+    // ── Core loop — keeps going until 1 survivor ──
+    while (getAlive(match.players).length > 1) {
+
       const alive = getAlive(match.players);
 
-      // Match over early
-      if (alive.length <= 1) break;
-
-      // Final showdown card when 2 remain
+      // Final showdown card when exactly 2 remain
       if (alive.length === 2) {
-        await sendAndDelete(
-          bot,
-          chatId,
-          finalCard(alive[0].name, alive[1].name)
-        );
+        await sendAndDelete(bot, chatId, finalCard(alive[0].name, alive[1].name));
         await delay(pace * 1.3);
       }
 
-      // Track who dies this round
-      const aliveBefore = getAlive(match.players).map((p) => p.id);
-      const roundText = buildRound(match, round, usedWorldEvents);
-      const aliveAfter = getAlive(match.players).map((p) => p.id);
+      // Snapshot alive before round
+      const aliveBefore = alive.map((p) => p.id);
 
-      // Record eliminated players in order
-      const newlyDead = match.players.filter(
+      const roundText = buildRound(match, round, usedWorldEvents);
+
+      // Snapshot alive after round to find who died
+      const aliveAfter = getAlive(match.players).map((p) => p.id);
+      const newlyDead  = match.players.filter(
         (p) => aliveBefore.includes(p.id) && !aliveAfter.includes(p.id)
       );
       eliminated.push(...newlyDead);
 
       await sendAndDelete(bot, chatId, roundText);
       await delay(alive.length === 2 ? pace * 1.4 : pace);
+
+      round++;
+
+      // Safety cap — 30 rounds max to prevent infinite loop
+      if (round > 30) break;
     }
 
-    // ─────────────────────────────────────────
-    // WINNER
-    // ─────────────────────────────────────────
+    // ── WINNER ────────────────────────────────────
     const survivors = getAlive(match.players);
-    const winner = survivors[0] || match.players[0];
+    const winner    = survivors[0] || match.players[0];
 
-    // Podium: last eliminated = 2nd, second-to-last = 3rd
     const reversedElim = eliminated.slice().reverse();
     const runnerUp = reversedElim[0] || null;
-    const third = reversedElim[1] || null;
+    const third    = reversedElim[1] || null;
 
-    const winnerText = fill(randomItem(match.event.winner), {
+    const winnerLine = fill(randomItem(match.event.winner), {
       winner: winner.name.toUpperCase(),
     });
 
@@ -221,32 +190,23 @@ async function startMatch(bot, chatId, match, speedMs) {
       winnerCard(
         winner.name,
         runnerUp ? runnerUp.name : null,
-        third ? third.name : null,
-        match.event.name,
-        winnerText
+        third    ? third.name    : null,
+        winnerLine
       )
     );
 
-    // ─────────────────────────────────────────
-    // SAVE STATS
-    // ─────────────────────────────────────────
+    // ── SAVE STATS ────────────────────────────────
     const realPlayers = match.players.filter((p) => !p.ai);
     saveMatchResult(realPlayers, winner, match.event.id, chatId);
 
   } catch (err) {
     console.error("[matchEngine] Error in chat " + chatId, err);
-    await bot.sendMessage(
-      chatId,
-      "Something went wrong. The match collapsed."
-    );
+    await bot.sendMessage(chatId, "Something went wrong. The match collapsed.");
   } finally {
     delete activeMatches[chatId];
   }
 }
 
-// ─────────────────────────────────────────────
-// Check if a match is running in a chat
-// ─────────────────────────────────────────────
 function isMatchActive(chatId) {
   return !!activeMatches[chatId];
 }
