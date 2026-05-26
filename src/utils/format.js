@@ -1,53 +1,62 @@
 // ─────────────────────────────────────────────
 //  OUTLASTBOT — Format Utility
+//  HTML parse mode — supports <s>, <pre>, <a>
 // ─────────────────────────────────────────────
 
+// Escape characters that break Telegram HTML
+function esc(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Wrap in <pre> for monospace block
 function mono(text) {
-  return "```\n" + text + "\n```";
+  return "<pre>" + text + "</pre>";
 }
 
 const DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+const SDIV = "──────────────────────────────";
 
 // ─────────────────────────────────────────────
 // INTRO CARD
 // ─────────────────────────────────────────────
 function introCard(event, playerCount) {
   return mono([
-    `${event.icon}  ${event.name.toUpperCase()}`,
+    esc(`${event.icon}  ${event.name.toUpperCase()}`),
     DIV,
     ``,
-    event.atmosphere,
+    esc(event.atmosphere),
     ``,
     DIV,
-    `${playerCount} SURVIVORS ENTERED`,
-    event.tagline,
+    esc(`${playerCount} SURVIVORS ENTERED`),
+    esc(event.tagline),
   ].join("\n"));
 }
 
 // ─────────────────────────────────────────────
-// ROUND CARD — no roster, no ELIMINATED prefix
-// Victim names get ~~strikethrough~~ via Markdown
-// (rendered outside monocode for strikethrough support)
+// ROUND CARD
+// Header + narrative in <pre>, events as HTML,
+// footer in <pre> — so <s> strikethrough works
 // ─────────────────────────────────────────────
 function roundCard(roundNumber, eventName, narrative, eventLines, survivorsLeft) {
-  // Header and narrative in monocode
   const header = mono([
-    `ROUND ${roundNumber}  |  ${eventName.toUpperCase()}`,
+    esc(`ROUND ${roundNumber}  |  ${eventName.toUpperCase()}`),
     DIV,
     ``,
-    `> "${narrative}"`,
+    esc(`> "${narrative}"`),
   ].join("\n"));
 
-  // Events as plain Markdown lines (supports ~~strikethrough~~ and [mentions])
+  // Event lines already contain HTML (<s> tags etc)
   const body = eventLines.join("\n");
 
-  // Footer in monocode
   const footer = mono([
     DIV,
-    `${survivorsLeft} REMAIN`,
+    esc(`${survivorsLeft} REMAIN`),
   ].join("\n"));
 
-  return header + "\n" + body + "\n" + footer;
+  return header + "\n" + body + "\n\n" + footer;
 }
 
 // ─────────────────────────────────────────────
@@ -58,14 +67,14 @@ function winnerCard(winner, runnerUp, third, winnerLines) {
     `VICTORY`,
     DIV,
     ``,
-    winnerLines,
+    esc(winnerLines),
     ``,
     DIV,
-    `1ST  --  ${winner.toUpperCase()}`,
+    esc(`1ST  --  ${winner.toUpperCase()}`),
   ];
 
-  if (runnerUp) lines.push(`2ND  --  ${runnerUp.toUpperCase()}`);
-  if (third)    lines.push(`3RD  --  ${third.toUpperCase()}`);
+  if (runnerUp) lines.push(esc(`2ND  --  ${runnerUp.toUpperCase()}`));
+  if (third)    lines.push(esc(`3RD  --  ${third.toUpperCase()}`));
 
   lines.push(DIV);
 
@@ -73,24 +82,24 @@ function winnerCard(winner, runnerUp, third, winnerLines) {
 }
 
 // ─────────────────────────────────────────────
-// LEADERBOARD — monocode table
+// LEADERBOARD
 // ─────────────────────────────────────────────
 function leaderboardCard(players, title) {
   const sorted = players.slice().sort((a, b) => (b.wins || 0) - (a.wins || 0));
 
   const lines = [
-    `${title || "LEADERBOARD"}`,
+    esc(title || "LEADERBOARD"),
     DIV,
-    `${"Player".padEnd(18)}${"Played".padStart(6)}${"Wins".padStart(5)}`,
-    `──────────────────────────────`,
+    esc(`${"Player".padEnd(18)}${"Played".padStart(6)}${"Wins".padStart(5)}`),
+    SDIV,
   ];
 
   for (let i = 0; i < Math.min(sorted.length, 20); i++) {
-    const p = sorted[i];
+    const p      = sorted[i];
     const name   = (p.name || "Unknown").toUpperCase().padEnd(18);
     const played = String(p.matches || 0).padStart(6);
     const wins   = String(p.wins    || 0).padStart(5);
-    lines.push(`${name}${played}${wins}`);
+    lines.push(esc(`${name}${played}${wins}`));
   }
 
   lines.push(DIV);
@@ -103,15 +112,15 @@ function leaderboardCard(players, title) {
 // ─────────────────────────────────────────────
 function profileCard(user) {
   return mono([
-    `${(user.name || "Unknown").toUpperCase()}`,
+    esc((user.name || "Unknown").toUpperCase()),
     DIV,
     ``,
-    `Wins         ${user.wins    || 0}`,
-    `Matches      ${user.matches || 0}`,
-    `Streak       ${user.streak  || 0}`,
+    esc(`Wins         ${user.wins    || 0}`),
+    esc(`Matches      ${user.matches || 0}`),
+    esc(`Streak       ${user.streak  || 0}`),
     ``,
     DIV,
-    `Speed        ${user.speed   || "normal"}`,
+    esc(`Speed        ${user.speed   || "normal"}`),
   ].join("\n"));
 }
 
@@ -120,7 +129,7 @@ function profileCard(user) {
 // ─────────────────────────────────────────────
 function lobbyCard(eventName, players, maxPlayers) {
   const lines = [
-    `LOBBY OPEN  |  ${eventName.toUpperCase()}`,
+    esc(`LOBBY OPEN  |  ${eventName.toUpperCase()}`),
     DIV,
     ``,
   ];
@@ -129,19 +138,20 @@ function lobbyCard(eventName, players, maxPlayers) {
     lines.push(`  No players yet.`);
   } else {
     for (let i = 0; i < players.length; i++) {
-      lines.push(`  ${i + 1}.  ${players[i].name}`);
+      lines.push(esc(`  ${i + 1}.  ${players[i].name}`));
     }
   }
 
   lines.push(``);
   lines.push(DIV);
-  lines.push(`${players.length} / ${maxPlayers} joined`);
+  lines.push(esc(`${players.length} / ${maxPlayers} joined`));
 
   return mono(lines.join("\n"));
 }
 
 module.exports = {
   mono,
+  esc,
   introCard,
   roundCard,
   winnerCard,
