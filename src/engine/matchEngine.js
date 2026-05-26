@@ -71,7 +71,7 @@ function runElimination(players, event) {
   victim.alive = false;
 
   // Build display names — victim gets strikethrough, killer is plain
-  const victimDisplay = `~~${victim.name.toUpperCase()}~~`;
+  const victimDisplay = `~${victim.name.toUpperCase()}~`;
   const killerDisplay = killerPlayer ? killerPlayer.name.toUpperCase() : "";
 
   return fill(template, {
