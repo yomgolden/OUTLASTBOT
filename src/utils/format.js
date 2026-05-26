@@ -1,26 +1,12 @@
 // ─────────────────────────────────────────────
 //  OUTLASTBOT — Format Utility
-//  All cards use monocode blocks for Telegram
 // ─────────────────────────────────────────────
 
-// Wrap in Telegram monocode block
 function mono(text) {
   return "```\n" + text + "\n```";
 }
 
-const DIV  = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
-const SDIV = "──────────────────────────────";
-
-// ─────────────────────────────────────────────
-// Clickable player mention (blue + tappable)
-// Only works for real players who have a Telegram ID
-// ─────────────────────────────────────────────
-function mention(player) {
-  if (player.ai || !player.id || String(player.id).startsWith("ai_")) {
-    return player.name.toUpperCase();
-  }
-  return `[${player.name.toUpperCase()}](tg://user?id=${player.id})`;
-}
+const DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
 // ─────────────────────────────────────────────
 // INTRO CARD
@@ -39,60 +25,29 @@ function introCard(event, playerCount) {
 }
 
 // ─────────────────────────────────────────────
-// ROUND CARD — monocode, 4–6 events, strikethrough dead
+// ROUND CARD — no roster, no ELIMINATED prefix
+// Victim names get ~~strikethrough~~ via Markdown
+// (rendered outside monocode for strikethrough support)
 // ─────────────────────────────────────────────
-function roundCard(roundNumber, eventName, narrative, eventLines, survivorsLeft, allPlayers) {
-  const lines = [
+function roundCard(roundNumber, eventName, narrative, eventLines, survivorsLeft) {
+  // Header and narrative in monocode
+  const header = mono([
     `ROUND ${roundNumber}  |  ${eventName.toUpperCase()}`,
     DIV,
     ``,
     `> "${narrative}"`,
-    ``,
-    SDIV,
-  ];
-
-  for (const ev of eventLines) {
-    lines.push(ev);
-    lines.push(``);
-  }
-
-  lines.push(SDIV);
-  lines.push(``);
-
-  // Survivor roster — alive normal, dead struck through
-  lines.push(`SURVIVORS`);
-  for (const p of allPlayers) {
-    if (p.alive) {
-      lines.push(`  + ${p.name.toUpperCase()}`);
-    } else {
-      lines.push(`  x ${p.name.toUpperCase()} [DEAD]`);
-    }
-  }
-
-  lines.push(``);
-  lines.push(DIV);
-  lines.push(`${survivorsLeft} REMAIN`);
-
-  return mono(lines.join("\n"));
-}
-
-// ─────────────────────────────────────────────
-// FINAL SHOWDOWN — 2 players left
-// ─────────────────────────────────────────────
-function finalCard(playerA, playerB) {
-  return mono([
-    `FINAL SHOWDOWN`,
-    DIV,
-    ``,
-    `Only two remain.`,
-    ``,
-    `  ${playerA.toUpperCase()}`,
-    `       vs`,
-    `  ${playerB.toUpperCase()}`,
-    ``,
-    DIV,
-    `One walks out. One does not.`,
   ].join("\n"));
+
+  // Events as plain Markdown lines (supports ~~strikethrough~~ and [mentions])
+  const body = eventLines.join("\n");
+
+  // Footer in monocode
+  const footer = mono([
+    DIV,
+    `${survivorsLeft} REMAIN`,
+  ].join("\n"));
+
+  return header + "\n" + body + "\n" + footer;
 }
 
 // ─────────────────────────────────────────────
@@ -127,12 +82,12 @@ function leaderboardCard(players, title) {
     `${title || "LEADERBOARD"}`,
     DIV,
     `${"Player".padEnd(18)}${"Played".padStart(6)}${"Wins".padStart(5)}`,
-    SDIV,
+    `──────────────────────────────`,
   ];
 
   for (let i = 0; i < Math.min(sorted.length, 20); i++) {
     const p = sorted[i];
-    const name  = (p.name || "Unknown").toUpperCase().padEnd(18);
+    const name   = (p.name || "Unknown").toUpperCase().padEnd(18);
     const played = String(p.matches || 0).padStart(6);
     const wins   = String(p.wins    || 0).padStart(5);
     lines.push(`${name}${played}${wins}`);
@@ -156,12 +111,12 @@ function profileCard(user) {
     `Streak       ${user.streak  || 0}`,
     ``,
     DIV,
-    `Speed   ${user.speed  || "normal"}`,
+    `Speed        ${user.speed   || "normal"}`,
   ].join("\n"));
 }
 
 // ─────────────────────────────────────────────
-// LOBBY CARD — live player list
+// LOBBY CARD
 // ─────────────────────────────────────────────
 function lobbyCard(eventName, players, maxPlayers) {
   const lines = [
@@ -187,10 +142,8 @@ function lobbyCard(eventName, players, maxPlayers) {
 
 module.exports = {
   mono,
-  mention,
   introCard,
   roundCard,
-  finalCard,
   winnerCard,
   leaderboardCard,
   profileCard,
