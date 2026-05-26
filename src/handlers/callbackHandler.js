@@ -130,6 +130,7 @@ module.exports = (bot) => {
             {
               chat_id: chatId,
               message_id: lobbyMsg.messageId,
+              parse_mode: "Markdown",
               reply_markup: {
                 inline_keyboard: [
                   [
