@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────
-//  OUTLASTBOT — Event: Evil Forest
-// ─────────────────────────────────────────────
-
 module.exports = {
   id: "evil_forest",
   name: "Evil Forest",
@@ -16,29 +12,44 @@ module.exports = {
   roundConfig: {
     min: 5,
     max: 8,
-    survivalChance: 0.35,
-    eliminationChance: 0.55,
-    worldEventChance: 0.25,
   },
 
-  narration: [
+  // Round 1 only
+  openingNarrative: [
     "You followed the old map deeper, even after the villagers begged you to turn back.",
-    "The silence between the trees felt wrong from the beginning.",
+    "The silence between the trees felt wrong from the very beginning.",
     "Your lantern flickered as the last path behind you disappeared into the fog.",
-    "Nobody mentioned the screams at night.",
     "You stepped over broken warning signs as distant drums echoed somewhere ahead.",
     "You thought the stories were meant to scare tourists away. You were wrong.",
     "You entered with a rusted machete and a map stained with dried blood.",
-    "Something moved beside you the moment the sun disappeared behind the trees.",
-    "Survival is the only thing that matters now.",
-    "You reached the ancient gates at midnight, just as the drums suddenly stopped.",
+  ],
+
+  // Middle rounds
+  midNarrative: [
     "I really thought this treasure was going to change my life.",
     "The deeper we go, the more this forest feels wrong.",
     "Nobody in the group says it out loud. But we are all terrified.",
     "I should have listened when they warned us about this place.",
     "Something inside these woods does not want us leaving alive.",
-    "I cannot tell if we are searching for treasure… or if something is leading us somewhere.",
+    "I cannot tell if we are searching for treasure or if something is leading us somewhere.",
     "The forest feels alive tonight. And it knows we are here.",
+    "At this point I cannot even remember the way back.",
+    "The gold stopped feeling important the moment the screaming started.",
+    "Every step deeper feels like a mistake.",
+    "I came here chasing riches. Now I just want to survive the night.",
+    "The silence in this forest feels heavier than the darkness itself.",
+    "Nobody has smiled since we entered.",
+    "I have a feeling the treasure was only bait to bring people here.",
+    "Every ruined statue we pass feels like a warning we ignored.",
+  ],
+
+  // Final round only
+  closingNarrative: [
+    "Only one can leave. The forest has always known this.",
+    "The drums have been building to this moment all night.",
+    "Whatever is left standing when dawn breaks — that is the one the forest chose.",
+    "This is what the forest was feeding toward all along.",
+    "The end was written before any of them entered the gates.",
   ],
 
   worldEvents: [
@@ -64,7 +75,7 @@ module.exports = {
     "{player} found ancient coins near a ruined shrine.",
     "{player} used a burning branch to scare away something hiding in the dark.",
     "Strange markings carved into the trees were noticed first by {player}.",
-    "The group froze when {player} whispered — \"Something is following us.\"",
+    "The group froze when {player} whispered — 'Something is following us.'",
     "{player} heard whispers calling their name deep in the forest.",
     "{player} found an abandoned shrine and immediately started apologizing to everything.",
     "{player} refused to believe in curses — until their hair started moving on its own.",
@@ -77,28 +88,28 @@ module.exports = {
     "{victim} drank water from a shrine pool. Their eyes went white before they fell.",
     "{killer} whispered something in Hausa. {victim} walked straight into the forest and never came back.",
     "{victim} refused to pour libation at the old oak. The forest took payment anyway.",
-    "A masquerade emerged from nowhere. {victim} couldn't look away. They walked toward it smiling.",
+    "A masquerade emerged from nowhere. {victim} could not look away. They walked toward it smiling.",
     "{killer} tied {victim} to a tree marked with red chalk and left them screaming.",
     "{victim} heard their own voice calling from deeper in the forest. They went to find it.",
     "{victim} found a fresh grave with their own name carved on it. They sat down and waited.",
     "A beautiful woman in white appeared on the path. {victim} followed her into the mist.",
-    "{victim} laughed and said \"worst case scenario, I die in the forest.\" The forest took notes.",
+    "{victim} laughed and said 'worst case scenario, I die in the forest.' The forest took notes.",
     "{killer} gave {victim} a choice. Both options led downward.",
-    "The ancestors wanted something. {victim} offered apologies. Apologies don't feed the dead.",
+    "The ancestors wanted something. {victim} offered apologies. Apologies do not feed the dead.",
     "The vines moved with intention. They wrapped around {victim} slowly, then all at once.",
     "{victim} was dragged into the undergrowth by pale hands.",
     "{killer} paid the forest something. {victim} became the price.",
     "{victim}'s reflection in the ritual mirror stepped out and took their place.",
-    "The red clay of the earth rose up to fill {victim}'s lungs until they hardened into a statue.",
+    "The red clay rose up to fill {victim}'s lungs until they hardened into a statue.",
   ],
 
   winner: [
     "Morning finally reached the forest. Covered in dirt, blood, and ash, {winner} walked out alone.",
-    "The drums suddenly stopped as {winner} crossed the forest border. For the first time all night, the trees stood still.",
+    "The drums suddenly stopped as {winner} crossed the forest border.",
     "The villagers froze when they saw {winner} return at sunrise. Nobody asked where the others were.",
-    "Gold coins spilled from {winner}'s bag onto the muddy road. Yet surviving the forest felt more valuable than the treasure.",
+    "Gold coins spilled from {winner}'s bag onto the muddy road. Surviving felt more valuable than the treasure.",
     "The Evil Forest spared {winner} tonight. But it never truly lets anyone leave.",
-    "Far behind the trees, something screamed in frustration before fading into silence. {winner} kept walking.",
-    "At sunrise, {winner} finally understood the truth. The forest never protected the treasure. It was feeding on greed all along.",
+    "Far behind the trees, something screamed in frustration. {winner} kept walking.",
+    "At sunrise, {winner} finally understood. The forest was never protecting treasure. It was feeding on greed all along.",
   ],
 };
