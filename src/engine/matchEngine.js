@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────
 
 const { randomItem, randomBetween } = require("../utils/random");
-const { introCard, roundCard, winnerCard } = require("../utils/format");
+const { introCard, roundCard, winnerCard, esc } = require("../utils/format");
 const { sendAndDelete } = require("../utils/autoDelete");
 const { saveMatchResult } = require("../utils/stats");
 
@@ -37,26 +37,16 @@ function pickTwo(players) {
 }
 
 // ─────────────────────────────────────────────
-// Mention — clickable for real players
-// ─────────────────────────────────────────────
-function mentionName(player) {
-  if (!player.ai && player.id && !String(player.id).startsWith("ai_")) {
-    return `[${player.name}](tg://user?id=${player.id})`;
-  }
-  return player.name;
-}
-
-// ─────────────────────────────────────────────
-// Run one elimination — returns Markdown line with ~~victim~~
+// Run one elimination — victim gets <s>strikethrough</s>
 // ─────────────────────────────────────────────
 function runElimination(players, event) {
   const alive = getAlive(players);
   if (alive.length <= 1) return null;
 
-  const template  = randomItem(event.elimination);
+  const template    = randomItem(event.elimination);
   const needsKiller = /{killer}/i.test(template) && alive.length >= 2;
 
-  let victim, killer, killerPlayer;
+  let victim, killerPlayer;
 
   if (needsKiller) {
     const [a, b] = pickTwo(players);
@@ -70,8 +60,7 @@ function runElimination(players, event) {
 
   victim.alive = false;
 
-  // Build display names — victim gets strikethrough, killer is plain
-  const victimDisplay = `~~${victim.name.toUpperCase()}~~`;
+  const victimDisplay = `<s>${victim.name.toUpperCase()}</s>`;
   const killerDisplay = killerPlayer ? killerPlayer.name.toUpperCase() : "";
 
   return fill(template, {
